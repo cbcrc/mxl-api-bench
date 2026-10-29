@@ -116,7 +116,7 @@ and reader (edit its `cpuset` lists for other hosts):
 
 ```bash
 export MXL_DOMAIN_DEVICE=/Volumes/mxl/domain_1      # tmpfs; must contain domain_def.json
-mkdir -p ABI-tester/logs/writer ABI-tester/logs/reader
+mkdir -p logs/writer logs/reader
 docker compose -f docker-compose.numa-writer-reader.yml up -d
 docker update --cpuset-mems 0 abi-writer
 docker update --cpuset-mems 1 abi-reader
@@ -129,7 +129,7 @@ Writer UI/API is on port 9607, reader on 9608.
 Run, for at least 5 minutes and at least 3 times:
 
 1. Start the writer scenario and let it reach steady state.
-2. Start the reader scenario on the same flow(s). Scenario names come from `ABI-tester/scenarios`
+2. Start the reader scenario on the same flow(s). Scenario names come from `scenarios/`
    (not in this repo); use the pair from your transit/remote-reader runs.
 3. Collect:
 
@@ -138,8 +138,8 @@ sudo pcm-memory 1 -csv=pcm-memory.csv     # per-node DRAM throughput
 sudo pcm 1 -csv=pcm-upi.csv               # UPI link utilisation
 ```
 
-Compare the writer's own reader (`ABI-tester/logs/writer/events.ndjson`, node 0) with the separate
-reader (`ABI-tester/logs/reader/events.ndjson`, node 1): p50/p99/max, plus UPI traffic. Expect the
+Compare the writer's own reader (`logs/writer/events.ndjson`, node 0) with the separate
+reader (`logs/reader/events.ndjson`, node 1): p50/p99/max, plus UPI traffic. Expect the
 node 1 reader to be slower and more variable, with UPI traffic near the grain rate and none for
 the local reader. If the transit metric covers only metadata and not the payload, the difference
 will be about a microsecond (a few remote cache misses); use a scenario that reads the full grain

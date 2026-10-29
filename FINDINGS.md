@@ -540,7 +540,7 @@ group — whatever the other members were still waiting on.
 ## Reproducing
 
 ```bash
-cd test-tools/ABI-tester
+cd ~/mxl-api-bench
 ulimit -n 65536
 ./sweep.sh "1 8 32 96 256" 599        # ~4 min; writes /tmp/abi-load-<N>.ndjson
 ```

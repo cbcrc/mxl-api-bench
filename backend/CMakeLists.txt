@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Root of the MXL SDK checkout. Override with -DMXL_ROOT=/some/path
-set(MXL_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../dmf-mxl"
+set(MXL_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../dmf-mxl"
     CACHE PATH "Root of the MXL SDK source tree")
 
 # The dmf-mxl build directory is named after the CMake preset that produced it,

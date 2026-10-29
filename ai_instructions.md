@@ -17,8 +17,8 @@ Each grain/sample step logs its media timestamp (OTS) beside the wall clock at w
 call actually happened, so **latency and propagation delay are measured, not guessed**.
 
 The backend is a native **C++17** binary that calls the MXL ABI directly and also serves
-the built React frontend. Keep code style consistent with `./gst-apps/mxl-info-gui`
-(spec shape, UI theme) and `./gst-apps/input-selector` (native-backend Dockerfile shape).
+the built React frontend. Keep code style consistent with mxl-hands-on's `gst-apps/mxl-info-gui`
+(spec shape, UI theme) and `gst-apps/input-selector` (native-backend Dockerfile shape).
 
 ## System Architecture
 
@@ -42,20 +42,23 @@ applications would.
 
 ## Environment & File Specifications
 
+- **MXL SDK:** `dmf-mxl/mxl` at the commit pinned in `./MXL_COMMIT`. The image fetches and
+  builds that commit itself; a native build expects a checkout of it in `./dmf-mxl`
+  (gitignored), which is what the `./dmf-mxl/...` paths below refer to.
 - **MXL public headers (source of truth):** `./dmf-mxl/lib/include/mxl/`
   — `mxl.h`, `flow.h`, `flowinfo.h`, `time.h`, `dataformat.h`, `rational.h`, `platform.h`.
   > ⚠️ `./dmf-mxl/build/<preset>/lib/include/mxl/` holds only the generated
   > `version.h`, which no public header includes. `./dmf-mxl/lib/include` alone is enough
   > to compile. There is **no** `mxl/dataflow.h` — all flow/grain/sample calls are in `flow.h`.
 - **MXL shared library:** `./dmf-mxl/build/Linux-Clang-Release/lib/libmxl.so.1.1`
-  → `/opt/mxl/lib/libmxl.so.1.1` in the image, with the conventional
-  `libmxl.so.1` → `libmxl.so` symlink chain.
+  → `/opt/mxl/lib/libmxl.so.1` in the image (installed under its SONAME), with a
+  `libmxl.so` symlink.
   > The build directory is named after the CMake preset that produced it, so a **native**
   > build outside Docker finds the library under `Darwin-Clang-Release/lib/libmxl.1.1.dylib`
   > on macOS. The image is always `linux/amd64`, so the Dockerfile paths above stay as they
   > are. `backend/CMakeLists.txt` picks the preset directory from the host and takes a
   > `-DMXL_PRESET=` override.
-- **ABI reference documentation:** `./ea-ema-upp-mxl-sdk/Docs/C-MXL-ABI.md` — regenerated
+- **ABI reference documentation:** `Docs/C-MXL-ABI.md` in `eng-upp-media-mxl-sdk` — regenerated
   for `dmf-mxl` commit `84350f7c`. Call descriptions in the catalog are lifted from it.
   `Docs/Lexique.md` defines the terminology. The directory is a **separate clone and is
   git-ignored**, so it does not arrive with a `git pull`.
@@ -66,7 +69,7 @@ applications would.
   walks. Distinct from the **instance domain**, which is a single domain directory passed as
   `argv[1]` and handed to `mxlCreateInstance`. In the container the scan root is the mounted
   Docker volume, `/mxl-domain`.
-- **Scenario directory:** `/app/scenarios` (bind-mounted to `test-tools/ABI-tester/scenarios`).
+- **Scenario directory:** `/app/scenarios` (bind-mounted to `./scenarios`).
 - **Flow templates:** `/app/flows` (baked into the image from `flows/`).
 
 Unlike the Rust apps (`input-selector`), a C++ build **links** `-lmxl` normally. There is
@@ -254,7 +257,7 @@ are not steps.
 ### 1. `scan_domains`
 
 C++ port of `_scan_domains()` / `_read_buffer_depth()` in
-`gst-apps/mxl-info-gui/backend/main.py`. Walk `MXL_DOMAIN_ROOT` with
+mxl-hands-on's `gst-apps/mxl-info-gui/backend/main.py`. Walk `MXL_DOMAIN_ROOT` with
 `std::filesystem::recursive_directory_iterator` looking for `domain_def.json`:
 
 ```json
@@ -469,116 +472,26 @@ poll is ample and avoids chunked-transfer complexity in httplib.
 
 ### Step 1: Docker Setup
 
-Build context is the **repository root**; all `COPY` paths are relative to it
-(e.g. `COPY test-tools/ABI-tester/backend/ /build/backend/`). Three stages, following
-`gst-apps/input-selector/Dockerfile`.
+Build context is the **repository root**; all `COPY` paths are relative to it. The stages
+and the compose service are in [`Dockerfile`](./Dockerfile) and
+[`docker-compose.yml`](./docker-compose.yml), which are the reference now:
 
-**Stage 1 — frontend:**
-```dockerfile
-FROM node:18-bullseye-slim AS frontend-builder
-WORKDIR /build
-COPY test-tools/ABI-tester/frontend/package.json \
-     test-tools/ABI-tester/frontend/package-lock.json* ./
-RUN npm install --legacy-peer-deps
-COPY test-tools/ABI-tester/frontend/ ./
-COPY gst-apps/logo/rgb_cbc-radio-canada-col-coul.png ./public/cbc-logo.png
-RUN npm run build
-```
+1. **MXL SDK** — fetch `dmf-mxl/mxl` at the sha in `MXL_COMMIT` and build `libmxl` and
+   `mxl-info` with the `Linux-Clang-Release` preset.
+2. **Frontend** — `npm ci && npm run build` on node 22.
+3. **C++ backend** — Ubuntu 24.04 ships both third-party dependencies (`nlohmann-json3-dev`,
+   `libcpp-httplib-dev`), so nothing is vendored; built against the stage 1 headers and library.
+4. **Runtime** — `libmxl` registered with `ldconfig`, the binary, the built frontend, `flows/`,
+   `scenarios/`, `entrypoint.sh`. `mxl-info` is copied for cross-checking convenience only;
+   the backend does not depend on it.
 
-**Stage 2 — C++ backend.** Ubuntu 24.04 ships both third-party dependencies, so nothing
-is vendored:
-```dockerfile
-FROM ubuntu:24.04 AS backend-builder
-ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        g++ cmake make nlohmann-json3-dev libcpp-httplib-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY dmf-mxl/lib/include /opt/mxl/include
-COPY dmf-mxl/build/Linux-Clang-Release/lib/libmxl.so.1.1 /opt/mxl/lib/libmxl.so.1.1
-RUN cd /opt/mxl/lib \
- && ln -sf libmxl.so.1.1 libmxl.so.1 \
- && ln -sf libmxl.so.1   libmxl.so
-
-COPY test-tools/ABI-tester/backend /build/backend
-WORKDIR /build/backend
-RUN cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j
-```
-Compile flags: `-std=c++17 -I/opt/mxl/include -L/opt/mxl/lib -lmxl -pthread`.
-
-**Stage 3 — runtime:**
-```dockerfile
-FROM ubuntu:24.04
-ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libcpp-httplib0.14t64 curl \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY dmf-mxl/build/Linux-Clang-Release/lib/libmxl.so.1.1 /opt/mxl/lib/libmxl.so.1.1
-RUN cd /opt/mxl/lib \
- && ln -sf libmxl.so.1.1 libmxl.so.1 \
- && ln -sf libmxl.so.1   libmxl.so \
- && ldconfig /opt/mxl/lib
-
-COPY dmf-mxl/build/Linux-Clang-Release/tools/mxl-info/mxl-info /opt/mxl/tools/mxl-info/mxl-info
-RUN chmod +x /opt/mxl/tools/mxl-info/mxl-info
-
-COPY --from=backend-builder /build/backend/build/abi-tester /app/abi-tester
-COPY --from=frontend-builder /build/dist /app/frontend/dist
-COPY test-tools/ABI-tester/flows     /app/flows
-COPY test-tools/ABI-tester/scenarios /app/scenarios
-COPY test-tools/ABI-tester/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-ENV LD_LIBRARY_PATH=/opt/mxl/lib
-ENV MXL_DOMAIN_ROOT=/mxl-domain
-ENV FRONTEND_DIST=/app/frontend/dist
-ENV SCENARIO_DIR=/app/scenarios
-ENV FLOW_DIR=/app/flows
-EXPOSE 9600
-ENTRYPOINT ["/entrypoint.sh"]
-```
-
-`mxl-info` is copied for cross-checking convenience only; the backend does not depend on it.
-
-**`test-tools/docker-compose.yml`:**
-```yaml
-name: test-tools
-
-volumes:
-  mxl-domain:
-    external: true
-    name: gst-apps_mxl-domain
-
-services:
-  abi-tester:
-    platform: linux/amd64
-    build:
-      context: ..
-      dockerfile: test-tools/ABI-tester/Dockerfile
-    image: abi-tester:latest
-    container_name: abi-tester
-    hostname: abi-tester
-    domainname: local
-    ports:
-      - "9607:9600"   # C++ backend serves both API and React frontend
-    volumes:
-      - type: volume
-        source: mxl-domain
-        target: /mxl-domain
-      - type: bind
-        source: ./ABI-tester/scenarios
-        target: /app/scenarios
-    environment:
-      - MXL_DOMAIN_ROOT=/mxl-domain
-```
-
-> ⚠️ The external volume requires the `gst-apps` stack to have created it. Run
-> `docker compose -f gst-apps/docker-compose.yml up -d` at least once first.
+> ⚠️ The compose file's external volume `gst-apps_mxl-domain` requires mxl-hands-on's
+> `gst-apps` stack to have created it. Run `docker compose -f gst-apps/docker-compose.yml up -d`
+> there at least once first.
 
 ### Step 2: C++ Backend
 
-Layout under `test-tools/ABI-tester/backend/`:
+Layout under `backend/`:
 
 | File | Responsibility |
 |---|---|
@@ -681,16 +594,15 @@ Six bundled scenarios:
 
 ### Step 6: Documentation
 
-Add the app to the repo's app inventory (`gst-apps/README.md` "Apps at a glance" and URL
-tables, or a new `test-tools/README.md`) with its port and one-line purpose.
+Describe the app in `README.md` ("Apps at a glance") with its port and one-line purpose.
 
 SPDX headers on every new file: `2026 CBC/Radio-Canada`, Apache-2.0 for code and
 configuration, CC-BY-4.0 for documentation.
 
 ## Verification
 
-1. `docker compose -f gst-apps/docker-compose.yml up -d` (creates the volume and the
-   domain), then `docker compose -f test-tools/docker-compose.yml up --build -d`.
+1. `docker compose -f gst-apps/docker-compose.yml up -d` in mxl-hands-on (creates the volume
+   and the domain), then `docker compose up --build -d` here.
 2. Open `http://localhost:9607` — the domain scan lists the dev domain with its buffer depth.
 3. Load **`01-video-write-read.json`** and press Run. Lane A creates an instance and a
    video writer, seeds its cursor from `mxlGetCurrentIndex()`, and writes 10 grains one
@@ -724,7 +636,7 @@ configuration, CC-BY-4.0 for documentation.
 10. Press Reset; the handle table empties and `mxl-info-gui` reports the flow as
     inactive/stale.
 11. Save a scenario from the UI, confirm the `.json` appears in
-    `test-tools/ABI-tester/scenarios/`, reload it, and confirm the run reproduces.
+    `scenarios/`, reload it, and confirm the run reproduces.
 
 Please write the Dockerfile, C++ backend, React frontend, entrypoint, flow templates and
-bundled scenarios at `./test-tools/ABI-tester/` following these guidelines.
+bundled scenarios at the repository root following these guidelines.

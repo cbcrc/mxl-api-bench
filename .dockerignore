@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
+# SPDX-License-Identifier: Apache-2.0
+
+# Host build products. The image builds its own, and backend/build/CMakeCache.txt
+# holds absolute /home/$USER paths that would make the in-image cmake refuse to run.
+frontend/node_modules
+frontend/dist
+backend/build
+logs
+dmf-mxl

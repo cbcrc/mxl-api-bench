@@ -7,7 +7,7 @@
 # (`numactl --hardware`); adjust for other topologies.
 #
 #   MXL_DOMAIN_DEVICE=/dev/shm/domain_1 \
-#     docker compose -f test-tools/docker-compose.numa-writer-reader.yml up -d
+#     docker compose -f docker-compose.numa-writer-reader.yml up -d
 name: numa-xtest
 
 x-abi-tester: &abi-tester
@@ -19,7 +19,7 @@ x-abi-tester: &abi-tester
       source: ${MXL_DOMAIN_DEVICE:-/dev/shm/domain_1}
       target: /mxl-domain
     - type: bind
-      source: ./ABI-tester/scenarios
+      source: ./scenarios
       target: /app/scenarios
   environment:
     - MXL_DOMAIN_ROOT=/mxl-domain
@@ -38,10 +38,10 @@ services:
         source: ${MXL_DOMAIN_DEVICE:-/dev/shm/domain_1}
         target: /mxl-domain
       - type: bind
-        source: ./ABI-tester/scenarios
+        source: ./scenarios
         target: /app/scenarios
       - type: bind
-        source: ./ABI-tester/logs/writer
+        source: ./logs/writer
         target: /app/logs
     environment:
       - MXL_DOMAIN_ROOT=/mxl-domain
@@ -60,10 +60,10 @@ services:
         source: ${MXL_DOMAIN_DEVICE:-/dev/shm/domain_1}
         target: /mxl-domain
       - type: bind
-        source: ./ABI-tester/scenarios
+        source: ./scenarios
         target: /app/scenarios
       - type: bind
-        source: ./ABI-tester/logs/reader
+        source: ./logs/reader
         target: /app/logs
     environment:
       - MXL_DOMAIN_ROOT=/mxl-domain

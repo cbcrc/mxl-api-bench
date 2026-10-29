@@ -2,11 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Hand-driving helpers for the ABI-tester. Source it, do not execute it:
-#     source ~/mxl-hands-on/test-tools/ABI-tester/dev.sh
+#     source ~/mxl-api-bench/dev.sh
 # A script runs in a subshell, so an executed copy would define these functions
 # and then throw them away.
 
-ABI_DIR="$HOME/mxl-hands-on/test-tools/ABI-tester"
+ABI_DIR="$HOME/mxl-api-bench"
 ABI_DOMAIN="${MXL_DOMAIN:-/Volumes/mxl/domain_1}"
 ABI_FLOW="a1b2c3d4-0001-4000-8000-000000000001"
 B="http://localhost:9600"

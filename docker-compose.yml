@@ -11,8 +11,8 @@ services:
   abi-tester:
     platform: linux/amd64
     build:
-      context: ..
-      dockerfile: test-tools/ABI-tester/Dockerfile
+      context: .
+      dockerfile: Dockerfile
     image: abi-tester:latest
     container_name: abi-tester
     hostname: abi-tester
@@ -26,12 +26,12 @@ services:
       # Scenarios saved from the UI land in the working tree, and new ones are
       # picked up without a rebuild.
       - type: bind
-        source: ./ABI-tester/scenarios
+        source: ./scenarios
         target: /app/scenarios
       # Event-log NDJSON, only when ABI_TESTER_LOG_FILE is set below. Nothing is
       # written unless it is -- the default is an in-memory tail and nothing on disk.
       - type: bind
-        source: ./ABI-tester/logs
+        source: ./logs
         target: /app/logs
     environment:
       - MXL_DOMAIN_ROOT=/mxl-domain

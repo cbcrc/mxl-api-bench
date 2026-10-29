@@ -222,7 +222,7 @@ Grain sizes:
 - **1080p v210:** 5 529 600 B. The ring of 5 grains is 27.6 MB and fits in one L3.
 - **2160p:** 22 118 400 B. The ring is 110.6 MB.
 
-The scenarios are 08 (lines), 10 (stamp) and 11 (copy) from `ABI-tester/scenarios`. Scenarios 12-17 (1080p
+The scenarios are 08 (lines), 10 (stamp) and 11 (copy) from `scenarios/`. Scenarios 12-17 (1080p
 head-3, 2160p, and 2160p head-3) were derived from those and exist only on .136, untracked (§4).
 
 ### Placement
@@ -344,7 +344,7 @@ The counter vocabulary used in §5-10:
 
 ### Analysis
 
-- **§1-6:** `ABI-tester/mxl-transit-stats.py` gives the transit, touch and end-to-end percentiles.
+- **§1-6:** `mxl-transit-stats.py` gives the transit, touch and end-to-end percentiles.
 - **§7-10:** p50 and p99 are computed from the NDJSON, dropping the first 100 grains of each lane. The first
   fills take about 7.4 ms because of page faults. With several lanes, p50 is the mean of the lanes' p50, and p99
   is that of the worst lane.
@@ -385,7 +385,7 @@ node 1, sharing a single MXL domain on tmpfs. Each read flavour ran once for 5 m
 | Host isolation | none: no `isolcpus`, governor `schedutil`, idle host (load 0.00) |
 | Flow | 1080p29.97 v210, 5 529 600 B grains, 9 000 grains written (5 min) |
 
-**Scenarios.** Each run uses scenario 10 (stamp), 08 (lines) or 11 (copy) from `ABI-tester/scenarios`. Both
+**Scenarios.** Each run uses scenario 10 (stamp), 08 (lines) or 11 (copy) from `scenarios/`. Both
 instances load it with jq overrides: `a7.times = 8999`, `b5.times = 8849`. Lane B stops 150 grains before the
 writer, so its last blocking reads don't wait out their 2 s timeouts.
 - **Writer instance** runs the writer lane A and the reader lane B. Its lane B is the **local** reader (node 0).

@@ -2,7 +2,7 @@
 # usage: ./sweep.sh "1 8 32 96 256" [times]
 # One server process per point: ABI_TESTER_LANES is read once in the Engine ctor.
 set -uo pipefail
-cd ~/mxl-hands-on/test-tools/ABI-tester
+cd ~/mxl-api-bench
 B=http://localhost:9600
 TIMES=${2:-599}
 SRV=""
