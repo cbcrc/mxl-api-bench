@@ -1,4 +1,4 @@
-# MXL under load — what the ABI-tester measured
+# MXL under load — what mxl-api-bench measured
 
 Findings from the M11.5 load sweep, 2026-08-30, plus §8 and §9 — a correctness bug in the
 synchronization group and the cost model of a group wait, both found 2026-09-04 while building the
@@ -578,5 +578,5 @@ pace:{jitter_ms:2, offset_ms:($i * 33.3667 / $lanes)},       # §3 — spread th
 **Before any run:** make sure nothing else is listening on port 9600. cpp-httplib sets
 `SO_REUSEPORT` (`httplib.h:1860`), so a stale server does **not** fail to bind — the kernel
 round-robins connections between listeners and requests land nondeterministically, with no
-error anywhere. `sweep.sh` guards against this; ad-hoc runs should `pkill -f build/abi-tester`
+error anywhere. `sweep.sh` guards against this; ad-hoc runs should `pkill -f build/mxl-api-bench`
 first.

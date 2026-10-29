@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
 # SPDX-License-Identifier: Apache-2.0
 #
-# The ABI tester from the published image, with no build stage and no dependency
+# The MXL API bench from the published image, with no build stage and no dependency
 # on the gst-apps stack. Use this on a machine that only has Docker and a clone of
 # this repository -- notably the far host in a transit measurement, which runs
 # 09-transit-remote-reader and nothing else.
@@ -11,15 +11,15 @@
 #
 # The domain directory must exist and hold a domain_def.json before `up`: the bind
 # below does not create it, and a missing path fails the mount rather than the app.
-name: test-tools
+name: mxl-api-bench
 
 services:
-  abi-tester:
+  mxl-api-bench:
     platform: linux/amd64
-    image: ghcr.io/cbcrc/abi-tester:latest
+    image: ghcr.io/cbcrc/mxl-api-bench:latest
     pull_policy: always
-    container_name: abi-tester
-    hostname: abi-tester
+    container_name: mxl-api-bench
+    hostname: mxl-api-bench
     domainname: local
     ports:
       - "9607:9600"   # the C++ backend serves both the API and the React frontend
@@ -52,5 +52,5 @@ services:
       - SCENARIO_DIR=/app/scenarios
       # On by default here, unlike docker-compose.yml: this file exists for the
       # transit runs, and those are only measurable if the events reach disk.
-      - ABI_TESTER_LOG_FILE=/app/logs/events.ndjson
-      - ABI_TESTER_LOG_MAX_BYTES=2000000000
+      - MXL_API_BENCH_LOG_FILE=/app/logs/events.ndjson
+      - MXL_API_BENCH_LOG_MAX_BYTES=2000000000

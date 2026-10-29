@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
 // SPDX-License-Identifier: Apache-2.0
 //
-// MXL ABI Tester - the backend that executes queued ABI calls.
+// MXL API Bench - the backend that executes queued ABI calls.
 
 #include <cstdio>
 #include <fstream>
@@ -86,8 +86,8 @@ int main(int argc, char** argv)
     std::printf("MXL SDK version: %u.%u.%u (%s)\n",
                 version.major, version.minor, version.bugfix, version.full);
     
-    // alias -> path. A bare argument binds "default", so `abi-tester /some/domain`
-    // still works; `abi-tester a=/p1 b=/p2` binds two.
+    // alias -> path. A bare argument binds "default", so `mxl-api-bench /some/domain`
+    // still works; `mxl-api-bench a=/p1 b=/p2` binds two.
     std::map<std::string, std::string> domains;
     for (int i = 1; i < argc; ++i)
     {

@@ -2,7 +2,7 @@
 
 This report asks what it costs when an MXL flow's writer and its readers run on different sockets of a 2-socket
 Sapphire Rapids host. It was measured on 2026-10-19 and 2026-10-20 on two identical lab hosts, following
-[numa-guide.md](numa-guide.md), with the ABI-tester.
+[numa-guide.md](numa-guide.md), with mxl-api-bench.
 
 It has four parts:
 - a [background](#background) section that explains the terms the rest of the report uses;
@@ -180,7 +180,7 @@ the reader's copy, and about **0.5 ms on the writer's fill**. Each is about 1.5 
 - One hardware type (2 x Xeon Silver 4510), on two hosts.
 - Most configurations ran once, for 90 s or 5 min. Where runs were repeated, they agreed to within 0.05 ms,
   except one at 0.14 ms (§7).
-- The ABI-tester's copy into a reused buffer stands in for a real consumer. No mxlsrc or GStreamer pipeline was
+- mxl-api-bench's copy into a reused buffer stands in for a real consumer. No mxlsrc or GStreamer pipeline was
   measured.
 - Counters were multiplexed over 20-30 s windows and scaled.
 
@@ -199,7 +199,7 @@ the reader's copy, and about **0.5 ms on the writer's fill**. Each is about 1.5 
 
 ### What is measured
 
-The ABI-tester runs scenarios made of lanes, one thread per lane.
+mxl-api-bench runs scenarios made of lanes, one thread per lane.
 - **The writer lane** writes v210 grains in real time at 29.97 fps. It fills each grain with `memset`, and stamps
   the index and `mxlGetTime()` into the first 24 bytes.
 - **A reader lane** does a blocking `mxlFlowReaderGetGrain` at its cursor, checks the stamp, and then touches the

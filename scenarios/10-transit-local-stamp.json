@@ -1,5 +1,5 @@
 {
-  "description": "Local transit, stamp only: Lane A writes 1080p29.97 v210 in real time for 20 min, stamping mxlGetTime() into every payload. Lane B reads the 24-byte stamp and never touches the rest of the grain, so only transit_ms is reported: commit + wake, with no payload read inside the timing. Lane C is a once-per-second head probe that cannot desync, kept as a watchdog for the 20-minute run. Pair with 09-transit-remote-reader on the far host. Log with ABI_TESTER_LOG_FILE, then run mxl-transit-stats.py.",
+  "description": "Local transit, stamp only: Lane A writes 1080p29.97 v210 in real time for 20 min, stamping mxlGetTime() into every payload. Lane B reads the 24-byte stamp and never touches the rest of the grain, so only transit_ms is reported: commit + wake, with no payload read inside the timing. Lane C is a once-per-second head probe that cannot desync, kept as a watchdog for the 20-minute run. Pair with 09-transit-remote-reader on the far host. Log with MXL_API_BENCH_LOG_FILE, then run mxl-transit-stats.py.",
   "lanes": {
     "A": [
       {

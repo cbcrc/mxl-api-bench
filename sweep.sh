@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # usage: ./sweep.sh "1 8 32 96 256" [times]
-# One server process per point: ABI_TESTER_LANES is read once in the Engine ctor.
+# One server process per point: MXL_API_BENCH_LANES is read once in the Engine ctor.
 set -uo pipefail
 cd ~/mxl-api-bench
 B=http://localhost:9600
@@ -12,7 +12,7 @@ trap cleanup EXIT
 # cpp-httplib sets SO_REUSEPORT (httplib.h:1860), so a stale server does NOT fail
 # to bind -- the kernel round-robins connections between every listener.
 if curl -sS -m 1 $B/state >/dev/null 2>&1; then
-  echo "FATAL: something already answers on $B -- pkill -f build/abi-tester"; exit 1
+  echo "FATAL: something already answers on $B -- pkill -f build/mxl-api-bench"; exit 1
 fi
 ulimit -n 65536 || echo "WARNING: could not raise fd limit; >145 flows will fail with EMFILE"
 rm -f /tmp/abi-load-*.ndjson /tm/abi-srv-*.log /tmp/load-*.json
@@ -20,8 +20,8 @@ for N in ${1:-1 8 32 96 256}; do
   echo "=== $N lanes, $((TIMES + 1)) grains/lane ==="
   ./gen-load.sh "$N" "$TIMES" > /tmp/load-$N.json || { echo "gen failed"; continue; }
   find /Volumes/mxl/domain_1 -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
-  ABI_TESTER_LANES=$N ABI_TESTER_LOG_FILE=/tmp/abi-load-$N.ndjson \
-    ./backend/build/abi-tester /Volumes/mxl/domain_1 > /tmp/abi-srv-$N.log 2>&1 &
+  MXL_API_BENCH_LANES=$N MXL_API_BENCH_LOG_FILE=/tmp/abi-load-$N.ndjson \
+    ./backend/build/mxl-api-bench /Volumes/mxl/domain_1 > /tmp/abi-srv-$N.log 2>&1 &
   SRV=$!
   for _ in $(seq 50); do
     curl -sS -m 1 $B/state > /dev/null 2>&1 && break

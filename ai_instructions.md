@@ -3,7 +3,7 @@ SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
 SPDX-License-Identifier: CC-BY-4.0
 -->
 
-# AI Agent Instructions: MXL ABI Tester
+# AI Agent Instructions: MXL API Bench
 
 ## Project Overview
 
@@ -85,7 +85,7 @@ Read this section before writing any code — three of these change the shape of
 that restriction would make it impossible to express writer-vs-writer conflict tests,
 reader-only tests, or reader-before-writer races.
 
-**A fixed pool of N, created once at startup**, N from `ABI_TESTER_LANES` (default 8, range
+**A fixed pool of N, created once at startup**, N from `MXL_API_BENCH_LANES` (default 8, range
 1..1024). This supersedes the original two-lane design, and is the one deviation that had to
 land before the frontend: M14/M15 build their UI against whatever lane model exists, and
 changing the lane count afterwards means rewriting JSX. The pool exists to load a machine
@@ -518,7 +518,7 @@ const char* FLOW_DIR        = getenv("FLOW_DIR")        ?: "/app/flows";
 constexpr double  DEFAULT_BUFFER_DEPTH_MS = 200.0;
 constexpr auto    HISTORY_DURATION_KEY = "urn:x-mxl:option:history_duration/v1.0";
 ```
-Plus `ABI_TESTER_LANES` (pool size, default 8) and `ABI_TESTER_LOG_FILE` (NDJSON event log;
+Plus `MXL_API_BENCH_LANES` (pool size, default 8) and `MXL_API_BENCH_LOG_FILE` (NDJSON event log;
 unset means no file). In the container `MXL_DOMAIN_ROOT` is set to `/mxl-domain`.
 
 **The server states its environment on startup**, in the terminal it was launched from:
@@ -547,7 +547,7 @@ Enable permissive CORS so the Vite dev server on 9707 can reach the API.
   text `#e0e0e0`, muted `#aaa` / `#888` / `#666`, inputs `#2a2a2a` on `1px solid #444`,
   primary button `#0d7c3e`, accent `#4caf50`, mono blocks `#111` with `#c8e6c9` text,
   table borders `#333` / `#222`, group header rows `#252525` on `#5b9bd5`.
-- Header row: `/cbc-logo.png` at `height: 2.2rem` beside an `<h1>` "MXL ABI Tester" in a
+- Header row: `/cbc-logo.png` at `height: 2.2rem` beside an `<h1>` "MXL API Bench" in a
   flex row (`gap: 1rem`), with a dimmed one-line subtitle.
 - Page root `maxWidth: "1400px"` — wider than the 960px of `mxl-info-gui`, because of the
   two side-by-side lane builders.
@@ -558,12 +558,12 @@ Enable permissive CORS so the Vite dev server on 9707 can reach the API.
 #!/bin/bash
 # SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
 # SPDX-License-Identifier: Apache-2.0
-# Entrypoint for the MXL ABI Tester container.
+# Entrypoint for the MXL API Bench container.
 # The native C++ backend serves both the REST API and the built React frontend on port 9600.
 
 set -e
 
-exec /app/abi-tester
+exec /app/mxl-api-bench
 ```
 
 ### Step 5: Bundled flow templates and scenarios

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
 # SPDX-License-Identifier: Apache-2.0
-name: test-tools
+name: mxl-api-bench
 
 volumes:
   mxl-domain:
@@ -8,14 +8,14 @@ volumes:
     name: gst-apps_mxl-domain
 
 services:
-  abi-tester:
+  mxl-api-bench:
     platform: linux/amd64
     build:
       context: .
       dockerfile: Dockerfile
-    image: abi-tester:latest
-    container_name: abi-tester
-    hostname: abi-tester
+    image: mxl-api-bench:latest
+    container_name: mxl-api-bench
+    hostname: mxl-api-bench
     domainname: local
     ports:
       - "9607:9600"   # the C++ backend serves both the API and the React frontend
@@ -28,7 +28,7 @@ services:
       - type: bind
         source: ./scenarios
         target: /app/scenarios
-      # Event-log NDJSON, only when ABI_TESTER_LOG_FILE is set below. Nothing is
+      # Event-log NDJSON, only when MXL_API_BENCH_LOG_FILE is set below. Nothing is
       # written unless it is -- the default is an in-memory tail and nothing on disk.
       - type: bind
         source: ./logs
@@ -39,5 +39,5 @@ services:
       # Uncomment to mirror every event to ./logs/. Appends; a second run of the same
       # process writes events.2.ndjson, so `read_json_auto('*.ndjson')` still finds
       # every run. A load sweep makes this large -- the cap is in bytes.
-      # - ABI_TESTER_LOG_FILE=/app/logs/events.ndjson
-      # - ABI_TESTER_LOG_MAX_BYTES=2000000000
+      # - MXL_API_BENCH_LOG_FILE=/app/logs/events.ndjson
+      # - MXL_API_BENCH_LOG_MAX_BYTES=2000000000

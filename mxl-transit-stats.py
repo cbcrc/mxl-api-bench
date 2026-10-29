@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
 # SPDX-License-Identifier: Apache-2.0
-"""Transit-time statistics from ABI-tester NDJSON event logs.
+"""Transit-time statistics from mxl-api-bench NDJSON event logs.
 
-Reads the files written by ABI_TESTER_LOG_FILE and reports, per (file, lane, call),
+Reads the files written by MXL_API_BENCH_LOG_FILE and reports, per (file, lane, call),
 the distribution of `stamp.transit_ms` -- the reader's wall clock minus the writer's
 mxlGetTime() stamped into the payload.
 

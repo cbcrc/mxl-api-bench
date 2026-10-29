@@ -28,7 +28,7 @@ public:
     // What this lane will cost per second, printed at startup next to "Lanes:".
     void announce(int lanes) const;
 
-    // Opens ABI_TESTER_LOG_FILE if it is set. Uset means no file, so the existing
+    // Opens MXL_API_BENCH_LOG_FILE if it is set. Uset means no file, so the existing
     // workflow is unchanged.
     EventLog();
     ~EventLog();
@@ -70,7 +70,7 @@ private:
     void stopFile(std::string const& why);      // _mutex held; closes the file, loudly
 
     uint64_t _bytes    = 0;     // size of the current file, seeded from it at open
-    uint64_t _maxBytes = 0;     // ABI_TESTER_LOG_MAX_BYTES; 0 means no cap
+    uint64_t _maxBytes = 0;     // MXL_API_BENCH_LOG_MAX_BYTES; 0 means no cap
 
     void trim();        // called with _mutex already held
     bool openRun();     // opens the file for run _run; false + stderr on failure
@@ -90,7 +90,7 @@ private:
     uint64_t _lastSeq = 0;      // the seq most recently handed out
     uint64_t _flushedSeq = 0;   // the seq of the last event written to disk; trim() stops here
 
-    std::string _path;          // ABI_TESTER_LOG_FILE as given; empty when unset
+    std::string _path;          // MXL_API_BENCH_LOG_FILE as given; empty when unset
     unsigned    _run = 1;       // rotation counter; /reset opens run 2, 3, ...
 
     std::ofstream _file;        

@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
 # SPDX-License-Identifier: Apache-2.0
-# Multi-stage Dockerfile for the MXL ABI tester.
+# Multi-stage Dockerfile for the MXL API bench.
 # Build context: the repository root.
 #
 # Stage 1 - build the MXL SDK from dmf-mxl/mxl at the commit pinned in MXL_COMMIT
@@ -143,7 +143,7 @@ RUN echo /opt/mxl/lib > /etc/ld.so.conf.d/mxl.conf \
 # Cross-checking convenience only; the backend does not depend on it.
 COPY --from=mxl-builder /out/tools/mxl-info /opt/mxl/tools/mxl-info/mxl-info
 
-COPY --from=backend-builder  /build/backend/build/abi-tester /app/abi-tester
+COPY --from=backend-builder  /build/backend/build/mxl-api-bench /app/mxl-api-bench
 COPY --from=frontend-builder /build/dist                     /app/frontend/dist
 COPY flows         /app/flows
 COPY scenarios     /app/scenarios

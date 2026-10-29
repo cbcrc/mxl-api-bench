@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
 # SPDX-License-Identifier: Apache-2.0
 #
-# Hand-driving helpers for the ABI-tester. Source it, do not execute it:
+# Hand-driving helpers for mxl-api-bench. Source it, do not execute it:
 #     source ~/mxl-api-bench/dev.sh
 # A script runs in a subshell, so an executed copy would define these functions
 # and then throw them away.
@@ -50,7 +50,7 @@ logs() { curl -sS "$B/log?since=${1:-0}" | jq -c '.[]'; }
 # samples T seconds apart and reports the second — the same quantity, measured
 # by the kernel instead of by us.
 cpu() {
-  local P=$(pgrep abi-tester) T=${1:-10}
+  local P=$(pgrep mxl-api-bench) T=${1:-10}
   if [ -r /proc/$P/stat ]; then
     local A=$(awk '{print $14+$15}' /proc/$P/stat)
     sleep "$T"

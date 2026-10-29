@@ -229,7 +229,7 @@ export default function App() {
       <header style={headerStyle}>
         <img src="/cbc-logo.png" alt="CBC/Radio-Canada" style={{ height: "2.2rem"}} />
         <div>
-          <h1>MXL ABI Tester</h1>
+          <h1>MXL API Bench</h1>
           <div style={subtitleStyle}>ALL 42 MXL C ABI calls, queued across two lanes.</div>
         </div>
         <a href="/engine-model.html" target="engine-model" style={docLinkStyle}>

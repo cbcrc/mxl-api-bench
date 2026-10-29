@@ -1,8 +1,8 @@
-# NUMA isolation and cross-NUMA read tests for abi-tester
+# NUMA isolation and cross-NUMA read tests for mxl-api-bench
 
 Two tests on a Linux Docker host, modelled on the Kubernetes approach in this repo:
 
-1. **Process isolation:** pin one `abi-tester` container (CPUs and memory) to a NUMA node and
+1. **Process isolation:** pin one `mxl-api-bench` container (CPUs and memory) to a NUMA node and
    show a noisy neighbour on the other node does not affect it.
 2. **Cross-NUMA read:** run a writer on node 0 and a reader on node 1 sharing one MXL domain,
    and measure the cost of reading across the socket interconnect.
@@ -73,14 +73,14 @@ the node 0 CPU list, so edit it for other hosts:
 
 ```yaml
 services:
-  abi-tester:
+  mxl-api-bench:
     cpuset: "0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46"  # node 0
 ```
 
 ```bash
 export MXL_DOMAIN_DEVICE=/Volumes/mxl/domain_1      # tmpfs; must contain domain_def.json first
 docker compose -f docker-compose-published.yml -f docker-compose.numa.yml up -d
-docker update --cpuset-mems 0 abi-tester && docker restart abi-tester
+docker update --cpuset-mems 0 mxl-api-bench && docker restart mxl-api-bench
 ```
 
 Verify placement as above (expect node 0 CPUs and `Mems_allowed_list: 0`).

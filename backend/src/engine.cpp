@@ -35,7 +35,7 @@ namespace
     // strtoull, not strtol: a cap worth setting in measured GB.
     uint64_t logMaxBytes()
     {
-        char const* fromEnv = std::getenv("ABI_TESTER_LOG_MAX_BYTES");
+        char const* fromEnv = std::getenv("MXL_API_BENCH_LOG_MAX_BYTES");
         if (fromEnv == nullptr)
         {
             return 0;
@@ -47,7 +47,7 @@ namespace
         if ((end == fromEnv) || (*end != '\0'))
         {
             std::fprintf(stderr,
-                         "ABI_TESTER_LOG_MAX_BYTES=%s ignored (want bytes); no cap\n", fromEnv);
+                         "MXL_API_BENCH_LOG_MAX_BYTES=%s ignored (want bytes); no cap\n", fromEnv);
             return 0;
         }
         return n;
@@ -55,10 +55,10 @@ namespace
 }
 EventLog::EventLog()
 {
-    char const* const path = std::getenv("ABI_TESTER_LOG_FILE");
+    char const* const path = std::getenv("MXL_API_BENCH_LOG_FILE");
     if (path == nullptr)
     {
-        std::printf("log file: (none, set ABI_TESTER_LOG_FILE)\n");
+        std::printf("log file: (none, set MXL_API_BENCH_LOG_FILE)\n");
         return;
     }
 
@@ -262,14 +262,14 @@ void EventLog::drainLocked(std::unique_lock<std::mutex>& lock)
     }
     else if ((_maxBytes > 0) && (_bytes >= _maxBytes))
     {
-        stopFile("reached ABI_TESTER_LOG_MAX_BYTES");
+        stopFile("reached MXL_API_BENCH_LOG_MAX_BYTES");
     }
 }
 
 // Called with _mutex held, from the flusher, which is the only thread allowed near _file.
 void EventLog::stopFile(std::string const& why)
 {
-    std::fprintf(stderr, "abi-tester: log file closed at seq %llu after %llu bytes: %s\n",
+    std::fprintf(stderr, "mxl-api-bench: log file closed at seq %llu after %llu bytes: %s\n",
                  (unsigned long long)_lastSeq, (unsigned long long)_bytes, why.c_str());
     
     // The marker goes in the file as well as the console. Whoever reads the NDJSON
@@ -416,7 +416,7 @@ namespace
     // about how many names we can spell.
     int laneCount()
     {
-        char const* fromEnv = std::getenv("ABI_TESTER_LANES");
+        char const* fromEnv = std::getenv("MXL_API_BENCH_LANES");
         if (fromEnv == nullptr)
         {
             return 8;
@@ -427,7 +427,7 @@ namespace
         
         if ((end == fromEnv) || (*end != '\0') || (n < 1) || (n > 1024))
         {
-            std::fprintf(stderr, "ABI_TESTER_LANES=%s ignored (want 1..1024); using 8\n", fromEnv);
+            std::fprintf(stderr, "MXL_API_BENCH_LANES=%s ignored (want 1..1024); using 8\n", fromEnv);
             return 8;
         }
         return (int)n;
@@ -849,7 +849,7 @@ bool Engine::loadScenario(nlohmann::json const& doc, std::string& error)
         {
             error = "unknown lane \"" + name + "\": the pool is " + laneName(0) + ".." +
                     laneName((int)_lanes.size() - 1) +
-                    "; set ABI_TESTER_LANES to widen it";
+                    "; set MXL_API_BENCH_LANES to widen it";
             return false;
         }
 
