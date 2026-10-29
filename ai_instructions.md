@@ -485,9 +485,8 @@ and the compose service are in [`Dockerfile`](./Dockerfile) and
    `scenarios/`, `entrypoint.sh`. `mxl-info` is copied for cross-checking convenience only;
    the backend does not depend on it.
 
-> ⚠️ The compose file's external volume `gst-apps_mxl-domain` requires mxl-hands-on's
-> `gst-apps` stack to have created it. Run `docker compose -f gst-apps/docker-compose.yml up -d`
-> there at least once first.
+> The compose file brings its own tmpfs domain volume, seeded with `domain_def.json` by a
+> long-running `busybox` `domain-init` service; the bench waits for its healthcheck.
 
 ### Step 2: C++ Backend
 
@@ -601,8 +600,7 @@ configuration, CC-BY-4.0 for documentation.
 
 ## Verification
 
-1. `docker compose -f gst-apps/docker-compose.yml up -d` in mxl-hands-on (creates the volume
-   and the domain), then `docker compose up --build -d` here.
+1. `docker compose up --build -d` (creates and seeds the domain, then starts the bench).
 2. Open `http://localhost:9607` — the domain scan lists the dev domain with its buffer depth.
 3. Load **`01-video-write-read.json`** and press Run. Lane A creates an instance and a
    video writer, seeds its cursor from `mxlGetCurrentIndex()`, and writes 10 grains one
