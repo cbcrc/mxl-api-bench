@@ -4,10 +4,32 @@ name: mxl-api-bench
 
 volumes:
   mxl-domain:
-    external: true
-    name: gst-apps_mxl-domain
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: none
+      o: nosuid,strictatime,mode=0755
 
 services:
+  domain-init:
+    # Stays running for the life of the stack: Docker's local+tmpfs volume
+    # driver unmounts (and wipes) the tmpfs once its last mounter exits, so a
+    # one-shot seed container would race the app container and lose the
+    # copied file. Holding the mount open here keeps the tmpfs alive.
+    image: busybox
+    init: true   # run tini as PID 1 so SIGTERM actually reaches `tail` below instead
+                 # of being ignored per the kernel's default PID-1 signal exemption
+    volumes:
+      - mxl-domain:/mxl-domain
+      - ./domain_def.json:/seed/domain_def.json:ro
+    entrypoint: ["sh", "-c", "cp /seed/domain_def.json /mxl-domain/domain_def.json && exec tail -f /dev/null"]
+    healthcheck:
+      test: ["CMD", "test", "-f", "/mxl-domain/domain_def.json"]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+      start_period: 2s
+
   mxl-api-bench:
     platform: linux/amd64
     build:
@@ -17,6 +39,9 @@ services:
     container_name: mxl-api-bench
     hostname: mxl-api-bench
     domainname: local
+    depends_on:
+      domain-init:
+        condition: service_healthy
     ports:
       - "9607:9600"   # the C++ backend serves both the API and the React frontend
     volumes:

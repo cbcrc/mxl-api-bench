@@ -9,8 +9,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 Build a Dockerized bench instrument that exposes **every public C ABI call of the MXL SDK**
 as a queueable step in a web UI. The operator composes parallel lanes of ABI calls, inserts
-explicit delays between them, runs the sequence **slower than real time** (or paced to the
-media clock), and reads every return value in a console. Sequences save to and load from
+explicit delays between them, runs the sequence at whatever pace they choose (paced to the
+media clock for real time, slowed by delays, or stepped one call at a time), and reads every
+return value in a console. Sequences save to and load from
 `.json` so a failure becomes a reproducible test scenario.
 
 Each grain/sample step logs its media timestamp (OTS) beside the wall clock at which the
@@ -428,8 +429,9 @@ Load/save `.json` under `/app/scenarios`. Reject path separators in the name.
 > runs one ABI call immediately; `/step` advances one lane by one queued step. `/step` meant
 > the former before the engine landed, so older recipes read backwards.
 
-Log delivery is **polling, not SSE** — the tool runs slower than real time, so a 250 ms
-poll is ample and avoids chunked-transfer complexity in httplib.
+Log delivery is **polling, not SSE** — each poll returns every event since its cursor, so even
+a real-time run loses nothing; a 250 ms poll only batches them, and avoids chunked-transfer
+complexity in httplib.
 
 ## Required UI Functionalities
 
@@ -485,9 +487,8 @@ and the compose service are in [`Dockerfile`](./Dockerfile) and
    `scenarios/`, `entrypoint.sh`. `mxl-info` is copied for cross-checking convenience only;
    the backend does not depend on it.
 
-> ⚠️ The compose file's external volume `gst-apps_mxl-domain` requires mxl-hands-on's
-> `gst-apps` stack to have created it. Run `docker compose -f gst-apps/docker-compose.yml up -d`
-> there at least once first.
+> The compose file brings its own tmpfs domain volume, seeded with `domain_def.json` by a
+> long-running `busybox` `domain-init` service; the bench waits for its healthcheck.
 
 ### Step 2: C++ Backend
 
@@ -601,8 +602,7 @@ configuration, CC-BY-4.0 for documentation.
 
 ## Verification
 
-1. `docker compose -f gst-apps/docker-compose.yml up -d` in mxl-hands-on (creates the volume
-   and the domain), then `docker compose up --build -d` here.
+1. `docker compose up --build -d` (creates and seeds the domain, then starts the bench).
 2. Open `http://localhost:9607` — the domain scan lists the dev domain with its buffer depth.
 3. Load **`01-video-write-read.json`** and press Run. Lane A creates an instance and a
    video writer, seeds its cursor from `mxlGetCurrentIndex()`, and writes 10 grains one
@@ -610,8 +610,9 @@ configuration, CC-BY-4.0 for documentation.
    same 10 indices. Every event shows `MXL_STATUS_OK`; the timing panel shows
    `payload_transit_ns` in the low milliseconds while `age_ns` grows by ~1 s per grain —
    proving the run is deterministic and decoupled from real time.
-4. Cross-check with `mxl-info-gui` (`http://localhost:9699`): the flow appears in the
-   domain with `Active: true`, and its `Head index` matches the last index written.
+4. Cross-check with the `mxl-info` baked into the image:
+   `docker exec mxl-api-bench /opt/mxl/tools/mxl-info/mxl-info -d /mxl-domain -f <flow id>`
+   shows the flow with `Active: true`, and its `Head index` matches the last index written.
 5. Load **`02-audio-write-read.json`**. Confirm `args_resolved` shows the range as
    `[index − count, index)`, and that `count` never exceeds
    `mxlFlowWriterGetMaxWriteLengthSamples`. The blocking read must **wake on the commit**,
@@ -633,8 +634,8 @@ configuration, CC-BY-4.0 for documentation.
    scenario to settle whether releasing and recreating the *reader* is sufficient recovery
    (what `dmf-mxl/tools/mxl-gst/sink.cpp` does) or whether the *instance* must be recreated
    — a question this tool exists to answer definitively.
-10. Press Reset; the handle table empties and `mxl-info-gui` reports the flow as
-    inactive/stale.
+10. Press Reset; the handle table empties and `mxl-info -l` no longer lists the flow:
+    releasing the last writer deletes it (see `04`).
 11. Save a scenario from the UI, confirm the `.json` appears in
     `scenarios/`, reload it, and confirm the run reproduces.
 

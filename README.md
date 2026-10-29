@@ -7,12 +7,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 A bench instrument for the [MXL SDK](https://github.com/dmf-mxl/mxl), built at the commit pinned in
 [`MXL_COMMIT`](./MXL_COMMIT). It exposes all 42 MXL C ABI calls as queueable steps across parallel
-lanes, runs them slower than real time, and measures OTS-derived latency and end-to-end propagation
-delay. Image `mxl-api-bench:latest`, UI at http://localhost:9607.
-
-It is a separate Docker stack from the `gst-apps/` of
-[mxl-hands-on](https://github.com/cbcrc/mxl-hands-on), but it attaches to the **same MXL domain**,
-so the two compose files are meant to run side by side.
+lanes, runs them at the pace you choose — paced to each grain's media clock (real time), spread out
+with explicit delays, or stepped one call at a time — and measures OTS-derived latency and
+end-to-end propagation delay. Image `mxl-api-bench:latest`, UI at http://localhost:9607.
 
 A C++ backend links `libmxl` directly and serves both the REST API and a React frontend on one
 port. Nothing is simulated: every row in the event log is one real call through the C ABI, with
@@ -27,14 +24,14 @@ The cross-NUMA transit study run with it is in [`numa-guide.md`](./numa-guide.md
 [`numa-results.md`](./numa-results.md) (data) and
 [the executive summary](./executive_summary_cross_numa_cost_of_mxl_grain_transit.md).
 
-## Prerequisites
+## The MXL domain
 
-The compose file consumes the **external** volume `gst-apps_mxl-domain`, so the `gst-apps` stack
-of mxl-hands-on must have created it at least once:
-
-```sh
-cd ~/mxl-hands-on && docker compose -f gst-apps/docker-compose.yml up -d
-```
+`docker-compose.yml` brings its own domain: a RAM-backed (`tmpfs`) volume, seeded with
+[`domain_def.json`](./domain_def.json) by a `busybox` `domain-init` service. That service stays
+running on purpose: the tmpfs is wiped when its last container exits, so it holds the mount open,
+and the bench waits for its healthcheck before starting. The domain lives only as long as the stack;
+`docker compose down` wipes its contents. Another container joins it by mounting the `mxl-api-bench_mxl-domain`
+volume at its own domain path.
 
 ## Run it
 
@@ -54,14 +51,24 @@ Dockerfile copies it in after the toolchain layers, fetches that one commit and 
 fetch onward are redone. The library is installed under its SONAME, so a minor version bump needs no
 Dockerfile edit.
 
-## Publish the image
+## CI and publishing
 
-Same pattern as the mxl-hands-on images. Pushes both `:$TAG_APP` and `:latest` with SBOM attached:
+[`.github/workflows/build-test-publish.yml`](./.github/workflows/build-test-publish.yml) runs on
+every pull request and on every push to `main`. It builds the image, brings up
+`docker-compose.yml`, and runs scenario `01-video-write-read` through
+[`ci/run-scenario.sh`](./ci/run-scenario.sh), which fails unless every lane finishes and every
+call returns ok. The same script works against a local stack:
 
 ```sh
-docker buildx build --platform linux/amd64 --sbom=true --provenance=mode=max \
-  -t "ghcr.io/cbcrc/mxl-api-bench:${TAG_APP}" -t "ghcr.io/cbcrc/mxl-api-bench:latest" \
-  --push .
+docker compose up -d && ci/run-scenario.sh scenarios/01-video-write-read.json
+```
+
+On `main` the job then pushes `ghcr.io/cbcrc/mxl-api-bench` with SBOM and provenance attached,
+tagged like the mxl-hands-on images — `api-bench-<repo short sha>-mxl-<MXL_COMMIT short sha>` and
+`latest` — and checks that the SBOM landed:
+
+```sh
+docker buildx imagetools inspect ghcr.io/cbcrc/mxl-api-bench:latest --format '{{ json .SBOM }}' | head -c 500
 ```
 
 ## Using it
