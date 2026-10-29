@@ -1,0 +1,134 @@
+# SPDX-FileCopyrightText: 2026 CBC/Radio-Canada
+# SPDX-License-Identifier: Apache-2.0
+#
+# Builds the image, runs scenario 01 against it through docker-compose.yml, and
+# on main publishes it to GHCR with SBOM and provenance attached. Tags follow
+# mxl-hands-on's TAG_APP: api-bench-<this repo's short sha>-mxl-<MXL_COMMIT short
+# sha>, plus latest.
+#
+# No `paths:` filter on purpose: the job is meant to be a required check, and a
+# required check that a path filter skips stays pending and blocks the merge.
+
+name: Build, test and publish
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# Superseded PR runs are pointless once new commits arrive. Never cancel a push
+# to main: that run publishes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  REGISTRY: ghcr.io
+  # GHCR requires an all-lowercase name; cbcrc/mxl-api-bench already is.
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-test-publish:
+    name: Build and test
+    runs-on: ubuntu-latest
+    # A cold build compiles the MXL SDK and its vcpkg dependencies.
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      # Only used on push; a pull_request run builds and tests without pushing.
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute tags
+        id: tags
+        run: |
+          set -euo pipefail
+          MXL="$(tr -d '[:space:]' < MXL_COMMIT)"
+          TAG_APP="api-bench-${GITHUB_SHA:0:7}-mxl-${MXL:0:7}"
+          echo "app=${TAG_APP}" >> "$GITHUB_OUTPUT"
+          echo "Building dmf-mxl/mxl@${MXL}, tag ${TAG_APP}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Loaded into the local daemon under the name docker-compose.yml uses, so the
+      # test below runs the exact compose stack. The docker exporter cannot carry
+      # attestations, so the SBOM is added by the push build further down, which
+      # reuses every layer from this one.
+      - name: Build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: mxl-api-bench:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Start the stack
+        run: docker compose up -d --no-build
+
+      - name: Run scenario 01
+        run: ci/run-scenario.sh scenarios/01-video-write-read.json
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down
+
+      - name: Log in to the Container registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push with SBOM and provenance
+        id: push
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.app }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          sbom: true
+          provenance: mode=max
+          cache-from: type=gha
+
+      - name: Verify the published image
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.app }}"
+          docker buildx imagetools inspect "$TAG"
+
+          # No pipe into `grep -q`: it exits on the first match, the inspect gets
+          # SIGPIPE, and pipefail then fails the step precisely when the SBOM is
+          # present and large.
+          sbom="$(docker buildx imagetools inspect "$TAG" --format '{{ json .SBOM }}')"
+          case "$sbom" in
+            *SPDXRef-DOCUMENT*) ;;
+            *) echo "::error::no SBOM attestation found on ${TAG}"; exit 1 ;;
+          esac
+
+          {
+            echo "## Published"
+            echo '```'
+            echo "$TAG"
+            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            echo '```'
+            echo "Digest: \`${{ steps.push.outputs.digest }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

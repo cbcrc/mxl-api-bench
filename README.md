@@ -51,14 +51,24 @@ Dockerfile copies it in after the toolchain layers, fetches that one commit and 
 fetch onward are redone. The library is installed under its SONAME, so a minor version bump needs no
 Dockerfile edit.
 
-## Publish the image
+## CI and publishing
 
-Same pattern as the mxl-hands-on images. Pushes both `:$TAG_APP` and `:latest` with SBOM attached:
+[`.github/workflows/build-test-publish.yml`](./.github/workflows/build-test-publish.yml) runs on
+every pull request and on every push to `main`. It builds the image, brings up
+`docker-compose.yml`, and runs scenario `01-video-write-read` through
+[`ci/run-scenario.sh`](./ci/run-scenario.sh), which fails unless every lane finishes and every
+call returns ok. The same script works against a local stack:
 
 ```sh
-docker buildx build --platform linux/amd64 --sbom=true --provenance=mode=max \
-  -t "ghcr.io/cbcrc/mxl-api-bench:${TAG_APP}" -t "ghcr.io/cbcrc/mxl-api-bench:latest" \
-  --push .
+docker compose up -d && ci/run-scenario.sh scenarios/01-video-write-read.json
+```
+
+On `main` the job then pushes `ghcr.io/cbcrc/mxl-api-bench` with SBOM and provenance attached,
+tagged like the mxl-hands-on images — `api-bench-<repo short sha>-mxl-<MXL_COMMIT short sha>` and
+`latest` — and checks that the SBOM landed:
+
+```sh
+docker buildx imagetools inspect ghcr.io/cbcrc/mxl-api-bench:latest --format '{{ json .SBOM }}' | head -c 500
 ```
 
 ## Using it
