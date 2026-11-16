@@ -1,5 +1,5 @@
 {
-  "description": "Local transit, copy, 2160p, head-3. Same as 15-transit-local-copy-2160p except lane B: b4 blocks on each new grain without touching it, then b4l reads and touches the grain three behind it (cursor-4 after b4 advanced). Three newer 22 MB grains (66 MB) are written over it, more than one socket L3 (30 MB), so the read comes from DRAM. transit_ms is ~3 frames by construction; touch_ms is the measure.",
+  "description": "Cross-NUMA transit, copy, 2160p, head-3: the scenario that isolated the cross-NUMA cost (numa-results.md). Lane A writes 2160p29.97 v210 (22 MB grains) in real time for 20 min, stamping mxlGetTime() into every payload. Lane B: b4 blocks on each new grain without touching it, then b4l memcpys the grain three behind it (cursor-4 after b4 advanced) into a reused per-lane buffer. Three newer 22 MB grains (66 MB) have been written over it, more than one socket's L3 (30 MB), so the copy comes from DRAM: touch_ms is the measure, transit_ms is ~3 frames by construction. Lane C is a once-per-second head probe kept as a watchdog. Run lane A and lane B in separate instances pinned to different NUMA nodes, one reader at a time (numa-guide.md). Log with MXL_API_BENCH_LOG_FILE, then run mxl-transit-stats.py.",
   "lanes": {
     "A": [
       {
@@ -232,5 +232,5 @@
       }
     ]
   },
-  "name": "17-transit-local-copy-2160p-lag3"
+  "name": "12-transit-local-copy-2160p-lag3"
 }
