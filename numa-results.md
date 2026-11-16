@@ -223,7 +223,9 @@ Grain sizes:
 - **2160p:** 22 118 400 B. The ring is 110.6 MB.
 
 The scenarios are 08 (lines), 10 (stamp) and 11 (copy) from `scenarios/`. Scenarios 12-17 (1080p
-head-3, 2160p, and 2160p head-3) were derived from those and exist only on .136, untracked (§4).
+head-3, 2160p, and 2160p head-3) were derived from those (§4). Only 17, the one that isolated the cross-NUMA cost,
+is kept in `scenarios/`, renamed `12-transit-local-copy-2160p-lag3`; 12-16 were intermediate steps. This report
+keeps the names the scenarios had during the runs.
 
 ### Placement
 
@@ -608,7 +610,8 @@ is the same build (`hands-on-1cdb007`). Nothing else was running on it. Same thr
 (writer and separate local reader on node 0, cross reader on node 1, 6 cores each). Each run is 5 minutes, with
 8 850 measured reads per reader and 0 failed.
 
-**Scenarios.** These exist only on .136, untracked:
+**Scenarios.** Derived from 08 and 11 for these runs. Only 17 is kept in `scenarios/`, as
+`12-transit-local-copy-2160p-lag3`:
 
 | File | Built from | Change |
 |---|---|---|

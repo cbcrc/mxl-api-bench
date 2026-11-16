@@ -1,0 +1,236 @@
+{
+  "description": "Cross-NUMA transit, copy, 2160p, head-3: the scenario that isolated the cross-NUMA cost (numa-results.md). Lane A writes 2160p29.97 v210 (22 MB grains) in real time for 20 min, stamping mxlGetTime() into every payload. Lane B: b4 blocks on each new grain without touching it, then b4l memcpys the grain three behind it (cursor-4 after b4 advanced) into a reused per-lane buffer. Three newer 22 MB grains (66 MB) have been written over it, more than one socket's L3 (30 MB), so the copy comes from DRAM: touch_ms is the measure, transit_ms is ~3 frames by construction. Lane C is a once-per-second head probe kept as a watchdog. Run lane A and lane B in separate instances pinned to different NUMA nodes, one reader at a time (numa-guide.md). Log with MXL_API_BENCH_LOG_FILE, then run mxl-transit-stats.py.",
+  "lanes": {
+    "A": [
+      {
+        "args": {},
+        "call": "mxlCreateInstance",
+        "id": "a0",
+        "note": "no \"domain\" key means the alias \"default\", i.e. whatever domain path the server was started with -- portable to the other host",
+        "out": {
+          "instance": "I"
+        }
+      },
+      {
+        "args": {
+          "flow_def": "{\"id\":\"a1b2c3d4-0008-4000-8000-000000000008\",\"label\":\"ABI Tester Transit 2160p\",\"description\":\"2160p29.97 v210 transit-measurement flow written by the ABI tester\",\"format\":\"urn:x-nmos:format:video\",\"media_type\":\"video/v210\",\"tags\":{\"urn:x-nmos:tag:grouphint/v1.0\":[\"ABI-Tester-Transit:Video\"]},\"parents\":[],\"grain_rate\":{\"numerator\":30000,\"denominator\":1001},\"frame_width\":3840,\"frame_height\":2160,\"interlace_mode\":\"progressive\",\"colorspace\":\"BT709\",\"components\":[{\"name\":\"Y\",\"width\":3840,\"height\":2160,\"bit_depth\":10},{\"name\":\"Cb\",\"width\":1920,\"height\":2160,\"bit_depth\":10},{\"name\":\"Cr\",\"width\":1920,\"height\":2160,\"bit_depth\":10}]}",
+          "instance": "I"
+        },
+        "call": "mxlCreateFlowWriter",
+        "id": "a1",
+        "out": {
+          "writer": "W"
+        }
+      },
+      {
+        "args": {
+          "index": {
+            "edit_rate": {
+              "den": 1001,
+              "num": 30000
+            },
+            "mode": "current",
+            "offset": 2
+          }
+        },
+        "call": "setCursor",
+        "id": "a2",
+        "note": "two grains ahead of now, so the first paced write aims at a deadline that has not already passed"
+      },
+      {
+        "args": {
+          "index": {
+            "mode": "cursor"
+          },
+          "writer": "W"
+        },
+        "call": "mxlFlowWriterOpenGrain",
+        "fill": {
+          "mode": "none"
+        },
+        "id": "a3",
+        "note": "warm-up: the first OpenGrain in a process is an outlier",
+        "out": {
+          "grain": "g"
+        }
+      },
+      {
+        "args": {
+          "grain": "g",
+          "writer": "W"
+        },
+        "call": "mxlFlowWriterCancelGrain",
+        "id": "a4"
+      },
+      {
+        "args": {
+          "index": {
+            "mode": "cursor"
+          },
+          "writer": "W"
+        },
+        "call": "mxlFlowWriterOpenGrain",
+        "fill": {
+          "byte": 16,
+          "mode": "const",
+          "stamp": true
+        },
+        "id": "a5",
+        "note": "stamp:true writes magic+index+mxlGetTime() into the first 24 payload bytes; that timestamp is the only end-to-end reference a reader gets",
+        "out": {
+          "grain": "g"
+        },
+        "pace": {}
+      },
+      {
+        "advance_cursor": 1,
+        "args": {
+          "grain": "g",
+          "writer": "W"
+        },
+        "call": "mxlFlowWriterCommitGrain",
+        "id": "a6"
+      },
+      {
+        "args": {
+          "times": 35999,
+          "to": "a5"
+        },
+        "call": "repeat",
+        "id": "a7"
+      },
+      {
+        "args": {
+          "instance": "I",
+          "writer": "W"
+        },
+        "call": "mxlReleaseFlowWriter",
+        "id": "a8",
+        "note": "marks the flow inactive, so the far end can see the run end"
+      }
+    ],
+    "B": [
+      {
+        "args": {},
+        "call": "mxlCreateInstance",
+        "delay_before_ms": 3000,
+        "id": "b0",
+        "out": {
+          "instance": "I2"
+        }
+      },
+      {
+        "args": {
+          "flow_id": "a1b2c3d4-0008-4000-8000-000000000008",
+          "instance": "I2"
+        },
+        "call": "mxlIsFlowActive",
+        "id": "b1",
+        "note": "diagnostic only; the lane does not branch on it. is_active:false here means the flow has no writer in THIS domain yet"
+      },
+      {
+        "args": {
+          "flow_id": "a1b2c3d4-0008-4000-8000-000000000008",
+          "instance": "I2"
+        },
+        "call": "mxlCreateFlowReader",
+        "id": "b2",
+        "out": {
+          "reader": "R"
+        }
+      },
+      {
+        "args": {
+          "index": {
+            "mode": "head",
+            "offset": 1,
+            "reader": "R"
+          }
+        },
+        "call": "setCursor",
+        "id": "b3",
+        "note": "the first grain not yet written; every read after this blocks on the writer instead of racing it"
+      },
+      {
+        "advance_cursor": 1,
+        "args": {
+          "index": {
+            "mode": "cursor"
+          },
+          "reader": "R",
+          "timeout_ns": 2000000000
+        },
+        "call": "mxlFlowReaderGetGrain",
+        "id": "b4",
+        "note": "waiter: blocks until the next grain commits, so the lag stays fixed at 3 grains"
+      },
+      {
+        "id": "b4l",
+        "call": "mxlFlowReaderGetGrain",
+        "args": {
+          "reader": "R",
+          "index": {
+            "mode": "cursor",
+            "offset": -4
+          },
+          "timeout_ns": 2000000000,
+          "verify_stamp": true,
+          "touch_payload": "copy"
+        },
+        "note": "cursor-4 after b4 advanced = head-3; already committed, so it does not block"
+      },
+      {
+        "args": {
+          "times": 35999,
+          "to": "b4"
+        },
+        "call": "repeat",
+        "id": "b5"
+      }
+    ],
+    "C": [
+      {
+        "args": {},
+        "call": "mxlCreateInstance",
+        "delay_before_ms": 5000,
+        "id": "c0",
+        "out": {
+          "instance": "I3"
+        }
+      },
+      {
+        "args": {
+          "flow_id": "a1b2c3d4-0008-4000-8000-000000000008",
+          "instance": "I3"
+        },
+        "call": "mxlCreateFlowReader",
+        "id": "c1",
+        "out": {
+          "reader": "R2"
+        }
+      },
+      {
+        "args": {
+          "index": {
+            "mode": "head"
+          },
+          "reader": "R2",
+          "verify_stamp": true
+        },
+        "call": "mxlFlowReaderGetGrainNonBlocking",
+        "delay_before_ms": 1000,
+        "id": "c2",
+        "note": "always jumps to the newest committed grain, so this lane can never desync; its transit carries up to one commit interval of extra age"
+      },
+      {
+        "args": {
+          "times": 1199,
+          "to": "c2"
+        },
+        "call": "repeat",
+        "id": "c3"
+      }
+    ]
+  },
+  "name": "12-transit-local-copy-2160p-lag3"
+}

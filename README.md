@@ -96,6 +96,9 @@ rebuild.
 | `05-slice-write` | One `OpenGrain`, four partial commits at 270 / 540 / 810 / 1080 slices; `headIndex` advances on the **first** partial commit |
 | `06-flow-invalid` | A stale reader returns `MXL_STATUS_OK` with **stale data**; `MXL_ERR_FLOW_INVALID` appears only on the `TOO_EARLY` path. Recovery needs every reader reference dropped — **not** a new instance |
 | `07-sync-group` | A synchronization group waits for its **slowest** member — it is a rendezvous, not a realigner. Video + audio, audio silent for 4 s and video then 2 frames late; the wait grows by exactly the laggard's delay. **Found an SDK bug:** a group with more than one member stops synchronizing after its first successful wait and returns `MXL_STATUS_OK` instantly |
+| `08`, `10`, `11-transit-local-*` | Transit timing: lane A writes 1080p29.97 v210 for 20 min and stamps `mxlGetTime()` into each grain; lane B reads every grain at commit and reports `transit_ms`, plus `touch_ms` for walking the payload (`08` lines, `10` stamp only, `11` full copy). Analyse with `mxl-transit-stats.py` |
+| `09-transit-remote-reader` | The reader half of `08`/`10`/`11`, for a second host that receives the flow over MXL fabrics. Cross-host `transit_ms` is only meaningful with both clocks on PTP |
+| `12-transit-local-copy-2160p-lag3` | The cross-NUMA measurement: `11` at 2160p, with lane B copying the grain three behind the head (head-3). 66 MB of newer writes evict that grain from a 30 MB L3, so the copy comes from DRAM. Run the writer and the reader in separate instances on different NUMA nodes ([`numa-results.md`](./numa-results.md), [`numa-guide.md`](./numa-guide.md)) |
 
 ## Configuration
 
